@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pinescript-syntax-checker"
+version = "0.1.0"
+description = "PineScript syntax checker MCP server and CLI"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "erevus" }]
+dependencies = [
+  "httpx>=0.24",
+  "mcp>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/erevus-cn/pinescript-syntax-checker"
+
+[project.scripts]
+pinescript-syntax-checker = "pinescript_syntax_checker.server:main"
+pinescript-syntax-checker-cli = "pinescript_syntax_checker.pinescript_checker:main"

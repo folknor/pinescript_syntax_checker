@@ -3,6 +3,7 @@ import json
 import argparse
 from pathlib import Path
 import sys
+import asyncio
 
 class PineScriptChecker:
     def __init__(self, username="admin"):
@@ -54,4 +55,62 @@ class PineScriptChecker:
             'source': (None, pine_code)
         }
 
+def main():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Check PineScript syntax using TradingView's public endpoint. "
+            "Example: python3 pinescript_checker.py my_script.pine --pretty"
+        )
+    )
+    parser.add_argument(
+        "path",
+        type=Path,
+        help="Path to the PineScript file to validate"
+    )
+    parser.add_argument(
+        "--username",
+        default="admin",
+        help="TradingView username used for the request (default: admin)"
+    )
+    parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output"
+    )
+    parser.add_argument(
+        "--full-response",
+        action="store_true",
+        help="Return the raw TradingView payload (including rarely used 'scopes'). "
+        "By default, unused sections are omitted to keep output concise.",
+    )
+    args = parser.parse_args()
+
+    try:
+        pine_code = args.path.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(json.dumps({
+            'success': False,
+            'error': f'Unable to read file {args.path}: {exc}',
+            'errors': []
+        }))
+        sys.exit(1)
+
+    checker = PineScriptChecker(username=args.username)
+    result = asyncio.run(checker.check_syntax(pine_code))
+
+    if not args.full_response:
+        payload = result.get("result")
+        if isinstance(payload, dict):
+            payload.pop("scopes", None)
+
+    if args.pretty:
+        print(json.dumps(result, indent=2))
+    else:
+        print(json.dumps(result))
+
+    if not result.get('success', True):
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
 
