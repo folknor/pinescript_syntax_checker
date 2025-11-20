@@ -1,12 +1,13 @@
 # PineScript Syntax Checker MCP Server
 
-A Model Context Protocol (MCP) server and CLI script for checking PineScript syntax using TradingView's API.
+A Model Context Protocol (MCP) server and CLI script for checking PineScript syntax using TradingView's API. Forked from https://github.com/erevus-cn/pinescript_syntax_checker (thanks to erevus for the original work).
 
 ## Features
 
 - Check PineScript syntax using TradingView's official API
 - MCP-compatible server with httpx for async HTTP requests
 - Option to run checks from the CLI (can be run by Codex and is much faster)
+- CLI output drops the unused `scopes` array by default to save context/tokens (`--full-response` keeps it)
 - Detailed error reporting with line and column information
 
 ## Quick Start
