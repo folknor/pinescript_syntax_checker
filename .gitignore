@@ -9,7 +9,33 @@ test/
 
 # Virtual environments
 .venv
+venv/
+env/
+ENV/
 
+# uv
 uv.lock
+.python-version
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
 RELEASE.md
 MANIFEST.in
+
+# Ruff
+.ruff_cache/

@@ -1,61 +1,89 @@
-import httpx
-import json
+#!/usr/bin/env python3
+"""PineScript syntax checker CLI and library."""
+
+from __future__ import annotations
+
 import argparse
-from pathlib import Path
-import sys
 import asyncio
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+import httpx
+
 
 class PineScriptChecker:
-    def __init__(self, username="admin"):
+    """PineScript syntax checker using TradingView's API."""
+
+    def __init__(self, username: str = "admin") -> None:
+        """Initialize the checker with a TradingView username.
+
+        Args:
+            username: TradingView username for the request (default: admin)
+        """
         self.username = username
-        self.api_url = f"https://pine-facade.tradingview.com/pine-facade/translate_light?user_name={username}&v=3"
+        base_url = "https://pine-facade.tradingview.com/pine-facade/translate_light"
+        self.api_url = f"{base_url}?user_name={username}&v=3"
         self.headers = {
-            'Referer': 'https://www.tradingview.com/',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
-            'DNT': '1',
+            "Referer": "https://www.tradingview.com/",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+            ),
+            "DNT": "1",
         }
 
-    async def check_syntax(self, pine_code):
-        """
-        Check PineScript code syntax
-        
+    async def check_syntax(self, pine_code: str) -> dict[str, Any]:
+        """Check PineScript code syntax.
+
         Args:
-            pine_code (str): PineScript source code
-            
+            pine_code: PineScript source code to validate
+
         Returns:
-            dict: Dictionary containing check results
+            Dictionary containing check results with keys:
+                - success (bool): Whether the check succeeded
+                - error (str, optional): Error message if check failed
+                - errors (list): List of syntax errors
+                - result (dict, optional): Parsed result from TradingView
         """
         try:
             # Build multipart form data
             files = self._build_multipart_data(pine_code)
-            
+
             # Send request using httpx
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     self.api_url,
                     files=files,
                     headers=self.headers,
-                    timeout=10.0
+                    timeout=10.0,
                 )
                 # Parse response
-                result = response.json()
+                result: dict[str, Any] = response.json()
                 return result
-            
+
         except httpx.RequestError as e:
             return {
-                'success': False,
-                'error': f'Network request failed: {str(e)}',
-                'errors': []
+                "success": False,
+                "error": f"Network request failed: {e!s}",
+                "errors": [],
             }
 
-    def _build_multipart_data(self, pine_code, boundary=None):
-        """Build multipart form data - using standard format"""
-        # Using httpx files parameter is more reliable
-        return {
-            'source': (None, pine_code)
-        }
+    def _build_multipart_data(self, pine_code: str) -> dict[str, tuple[None, str]]:
+        """Build multipart form data using standard format.
 
-def main():
+        Args:
+            pine_code: PineScript source code
+
+        Returns:
+            Dictionary for httpx files parameter
+        """
+        return {"source": (None, pine_code)}
+
+
+def main() -> None:
+    """CLI entry point for PineScript syntax checker."""
     parser = argparse.ArgumentParser(
         description=(
             "Check PineScript syntax using TradingView's public endpoint. "
@@ -65,17 +93,17 @@ def main():
     parser.add_argument(
         "path",
         type=Path,
-        help="Path to the PineScript file to validate"
+        help="Path to the PineScript file to validate",
     )
     parser.add_argument(
         "--username",
         default="admin",
-        help="TradingView username used for the request (default: admin)"
+        help="TradingView username used for the request (default: admin)",
     )
     parser.add_argument(
         "--pretty",
         action="store_true",
-        help="Pretty-print JSON output"
+        help="Pretty-print JSON output",
     )
     parser.add_argument(
         "--full-response",
@@ -88,11 +116,15 @@ def main():
     try:
         pine_code = args.path.read_text(encoding="utf-8")
     except OSError as exc:
-        print(json.dumps({
-            'success': False,
-            'error': f'Unable to read file {args.path}: {exc}',
-            'errors': []
-        }))
+        print(
+            json.dumps(
+                {
+                    "success": False,
+                    "error": f"Unable to read file {args.path}: {exc}",
+                    "errors": [],
+                }
+            )
+        )
         sys.exit(1)
 
     checker = PineScriptChecker(username=args.username)
@@ -108,9 +140,9 @@ def main():
     else:
         print(json.dumps(result))
 
-    if not result.get('success', True):
+    if not result.get("success", True):
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
-

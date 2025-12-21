@@ -9,4 +9,4 @@ __author__ = "erevus"
 
 from .server import app, check_syntax
 
-__all__ = ["app", "check_syntax"] 
+__all__ = ["app", "check_syntax"]

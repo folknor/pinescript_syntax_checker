@@ -6,62 +6,169 @@ A Model Context Protocol (MCP) server and CLI script for checking PineScript syn
 
 - Check PineScript syntax using TradingView's official API
 - MCP-compatible server with httpx for async HTTP requests
-- Option to run checks from the CLI (can be run by Codex and is much faster)
+- Fast CLI tool that can be run directly or via command
 - CLI output drops the unused `scopes` array by default to save context/tokens (`--full-response` keeps it)
 - Detailed error reporting with line and column information
+- Modern Python tooling with `uv`, `ruff`, and `ty`
+- Pre-commit hooks for code quality
+
+## Requirements
+
+- Python 3.13 or higher
+- [uv](https://docs.astral.sh/uv/) package manager (recommended) or pip
 
 ## Quick Start
 
-Use the `pinescript_syntax_checker` CLI or the MCP server inside OpenAI Codex.
-
-### Run as CLI script
-Simpler and faster than MCP. Use it manually, or have Codex/Claude/Gemini call it in the console after edits.
+### Installation with uv (Recommended)
 
 ```bash
-# check usage
-python3 pinescript_syntax_checker/pinescript_checker.py --help
-
-# run a check on a file
-python3 pinescript_syntax_checker/pinescript_checker.py pinescript-file.pine --pretty
-```
-### Run as MCP server
-Build the pip package using `pyproject.toml`, then run:
-
-```bash
-# make sure you are in project dir
+# Clone the repository
+git clone https://github.com/erevus-cn/pinescript_syntax_checker.git
 cd pinescript_syntax_checker
 
-# install build package
-python -m pip install build
+# Sync dependencies (creates virtual environment automatically)
+uv sync
 
-# build pip module, which will create package and put it into dist/ dir
-python -m build
-
-# install package you just built
-python -m pip install dist/pinescript_syntax_checker-0.1.0-py3-none-any.whl
-
-# add it to codex
-codex mcp add pinescript-syntax-checker -- pinescript-syntax-checker
-
-# verify it was added
-codex mcp list
+# Run with uvx (no installation needed)
+uvx pinescript-syntax-checker
 ```
 
-To undo the MCP setup:
+### Installation with pip
 
 ```bash
-# remove from codex
-codex mcp remove pinescript-syntax-checker
+# Install from source
+pip install .
 
-# verify that it was removed
-codex mcp list
-
-# uninstall pip package
-python -m pip uninstall dist/pinescript_syntax_checker-0.1.0-py3-none-any.whl
-
-# remove build artifacts (make sure you are in project folder)
-rm -rf dist build *.egg-info
+# Or install in editable mode for development
+pip install -e .
 ```
+
+## Usage
+
+### Run as CLI script
+
+The CLI is the simplest and fastest way to check PineScript syntax. It can be invoked in multiple ways:
+
+```bash
+# Method 1: Run directly (file is executable)
+./pinescript_syntax_checker/pinescript_checker.py my_script.pine --pretty
+
+# Method 2: Run via installed command
+pinescript-checker my_script.pine --pretty
+
+# Method 3: Run as module
+python -m pinescript_syntax_checker.pinescript_checker my_script.pine --pretty
+
+# Method 4: Run with uvx (no installation)
+uvx --from . pinescript-checker my_script.pine --pretty
+```
+
+#### CLI Options
+
+```bash
+pinescript-checker --help
+
+options:
+  -h, --help            show this help message and exit
+  --username USERNAME   TradingView username used for the request (default: admin)
+  --pretty              Pretty-print JSON output
+  --full-response       Return the raw TradingView payload (including rarely used 'scopes')
+```
+
+### Run as MCP server
+
+Build and install the package, then run:
+
+```bash
+# Install the package
+uv sync
+uv pip install .
+
+# Run the MCP server
+pinescript-syntax-checker
+
+# Or run directly with uvx
+uvx --from . pinescript-syntax-checker
+```
+
+#### Add to Claude Desktop or Cline
+
+Add this to your MCP configuration file:
+
+```json
+{
+  "mcpServers": {
+    "pinescript-syntax-checker": {
+      "command": "uvx",
+      "args": ["pinescript-syntax-checker"]
+    }
+  }
+}
+```
+
+Or use the installed version:
+
+```json
+{
+  "mcpServers": {
+    "pinescript-syntax-checker": {
+      "command": "pinescript-syntax-checker"
+    }
+  }
+}
+```
+
+## Development
+
+### Setup Development Environment
+
+```bash
+# Sync dependencies including dev tools
+uv sync
+
+# Install pre-commit hooks
+uv run pre-commit install
+
+# Run linting and formatting
+uv run ruff check --fix
+uv run ruff format
+
+# Run type checking
+uv run ty
+```
+
+### Development Tools
+
+This project uses modern Python tooling:
+
+- **uv**: Fast Python package manager and project manager
+- **ruff**: Fast Python linter and formatter (replaces flake8, black, isort, etc.)
+- **ty**: Fast type checker from Astral
+- **pre-commit**: Automated code quality checks before commits
+- **hatchling**: Modern Python build backend
+
+### Pre-commit Hooks
+
+Pre-commit hooks automatically run on every commit to ensure code quality:
+
+- `ruff check --fix`: Auto-fix linting issues
+- `ruff format`: Format code
+- `ty`: Check type annotations
+
+To run hooks manually:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+### Making Changes
+
+1. Make your changes to the code
+2. Run formatting and linting: `uv run ruff check --fix && uv run ruff format`
+3. Run type checking: `uv run ty`
+4. Test your changes
+5. Commit (pre-commit hooks will run automatically)
+
 ## API
 
 ### check_syntax
@@ -70,6 +177,13 @@ Checks PineScript syntax using TradingView's API.
 
 **Parameters:**
 - `pine_code` (str): The PineScript code to check
+
+**Returns:**
+- `dict`: Dictionary containing check results with keys:
+  - `success` (bool): Whether the check succeeded
+  - `error` (str, optional): Error message if check failed
+  - `errors` (list): List of syntax errors
+  - `result` (dict, optional): Parsed result from TradingView
 
 ## Example
 
@@ -88,12 +202,33 @@ plot(close)
     "variables": [],
     "functions": [],
     "types": [],
-    "enums": [],
-    "scopes": []
+    "enums": []
   }
 }
 ```
 
+## Project Structure
+
+```
+pinescript_syntax_checker/
+├── .pre-commit-config.yaml          # Pre-commit hooks configuration
+├── pyproject.toml                   # Project configuration and dependencies
+├── README.md                        # This file
+├── LICENSE                          # MIT License
+└── pinescript_syntax_checker/       # Main package
+    ├── __init__.py                  # Package initialization
+    ├── pinescript_checker.py        # CLI and checker implementation (executable)
+    └── server.py                    # MCP server implementation
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with proper type hints and documentation
+4. Ensure all tests pass and code is formatted
+5. Submit a pull request
+
 ## License
 
-MIT License
+MIT License - see LICENSE file for details
